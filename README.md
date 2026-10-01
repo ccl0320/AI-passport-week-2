@@ -1,4 +1,6 @@
-# BSH AI Passport 2.0 — AI Week prototype
+# BSH AI Passport — Google Sheet edition
+
+Current version replaces browser storage with a Google Sheet backend. See [DEPLOYMENT.md](DEPLOYMENT.md) for activation, data handling and validation. Until `config.js` contains a deployed Apps Script URL, check-ins are disabled. The text below documents the earlier prototype and is retained as historical context only.
 
 A responsive, dependency-free static prototype for a 10-day AI Week learning game. It is deliberately isolated from the original AI-passport site and from the original Google Apps Script URL.
 

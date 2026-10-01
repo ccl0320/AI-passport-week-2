@@ -1,0 +1,14 @@
+const vm=require('node:vm'),fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:assert/strict');
+const sheets=Object.fromEntries(['Participants','Checkins','Feedback','Creations'].map(n=>[n,{data:[[]],getLastRow(){return this.data.length},getLastColumn(){return this.data[1]?.length||6},appendRow(r){this.data.push(r)},getRange(r,c,rows,cols){return{getValues:()=>this.data.slice(r-1,r-1+rows).map(x=>x.slice(c-1,c-1+cols)),setValues:v=>{v.forEach((x,i)=>this.data[r-1+i]=x)}}}}]));
+const cache=new Map(),ctx={PropertiesService:{getScriptProperties:()=>({getProperty:()=>"test-db"})},SpreadsheetApp:{openById:()=>({getSheetByName:n=>sheets[n]}),flush(){}},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},CacheService:{getScriptCache:()=>({get:k=>cache.get(k),put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},Utilities:{DigestAlgorithm:{SHA_256:1},computeDigest:(_,v)=>[...crypto.createHash('sha256').update(v).digest()],getUuid:()=>crypto.randomUUID()},Date,JSON,Error};vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/Code.gs','utf8'),ctx);
+const auth={id:'test-one',pin:'long-test-passphrase'},call=p=>ctx.handle_({...auth,...p});
+assert.equal(call({action:'register',nick:'Tester',dept:'Marketing'}).ok,true);
+assert.throws(()=>call({action:'register',nick:'Tester',dept:'Marketing'}),/已使用/);
+assert.throws(()=>call({action:'login',pin:'wrong-passphrase'}),/不正確/);
+assert.throws(()=>call({action:'checkin',day:8,reflection:'這是一段充分長度的資料安全學習心得',safety:[1]}),/資料安全/);
+call({action:'checkin',day:1,reflection:'我學會讓工具先確認需求再寫出草稿'});call({action:'checkin',day:1,reflection:'我更新心得並再次確認資料安全與內容正確性'});
+assert.equal(sheets.Checkins.data.length,2);
+assert.equal(Object.keys(call({action:'login'}).state.progress).length,1);
+call({action:'feedback',feedback:{work:'=HYPERLINK("x")'}});assert.ok(sheets.Feedback.data[1][1].startsWith("'="));
+assert.throws(()=>call({action:'creation',art:{title:'x',desc:'x'},consent:false}),/同意/);
+console.log('PASS: account validation, access control, safety quiz, idempotent writes, cross-session retrieval, formula escaping, consent');
